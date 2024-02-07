@@ -19,6 +19,12 @@
         "command": "audible-code.ReadLine",
         "title": "Read Line"
       }
+    ],
+    "keybindings":[
+      {
+        "command": "audible-code.ReadErrors",
+        "key": "Ctrl+Shift+L"
+      }
     ]
   },
   "scripts": {
