@@ -74,6 +74,20 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  context.subscriptions.push(
+    window.onDidChangeTextEditorSelection(async (event) => {
+      const editor = event.textEditor;
+      if (editor !== window.activeTextEditor) return;
+      const itemlist = await vscode.commands.executeCommand(
+        "vscode.executeCompletionItemProvider",
+        editor.document.uri,
+        editor.selection.active
+      );
+      console.log(itemlist);
+      console.log(await vscode.commands.executeCommand("editor.action.triggerSuggest"));
+    })
+  );
+
   //Register command to read current line
   let disposable = vscode.commands.registerCommand("audible-code.ReadLine", () => {
     const editor = window.activeTextEditor;
