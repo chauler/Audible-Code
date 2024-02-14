@@ -52,39 +52,49 @@ export function activate(context: vscode.ExtensionContext) {
         return e.range.start.line === currLine;
       });
       console.log(`diagnostics: ${diagnostics.length} prevLine: ${prevLineNumber} curr: ${currLine}`);
+      console.log(diagnostics);
+
+      diagnostics = diagnostics.filter((e) => {
+        return e.severity === 1 || e.severity === 2;
+      });
+
       if (diagnostics.length > 0 && currLine !== prevLineNumber) {
         const outputChannel = jzz().openMidiOut().or("error");
         outputChannel.program(1, 81);
         outputChannel.note(1, 50, 127, 100);
-        const lineDisposable = window.onDidChangeTextEditorSelection((event) => {
-          const editor = event.textEditor;
-          if (editor !== window.activeTextEditor) return;
-          if (editor.selection.active.line !== currLine) {
-            lineDisposable.dispose();
-            commandDisposable.dispose();
-          }
-        });
-        const commandDisposable = vscode.commands.registerCommand("audible-code.ReadErrors", async () => {
-          for (const diagnostic of diagnostics) {
-            await OutputTTS(diagnostic.message);
-          }
-        });
       }
       prevLineNumber = currLine;
     })
   );
 
+  const commandDisposable = vscode.commands.registerCommand("audible-code.ReadErrors", async () => {
+    const editor = window.activeTextEditor;
+    if (!editor) return;
+
+    const currLine = editor.selection.active.line;
+    let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
+      return e.range.start.line === currLine;
+    });
+
+    diagnostics = diagnostics.filter((e) => {
+      return e.severity === 1 || e.severity === 2;
+    });
+
+    for (const diagnostic of diagnostics) {
+      await OutputTTS(diagnostic.message);
+    }
+  });
+
+  //Reading Suggestions -- NOT IMPLEMENTED
   context.subscriptions.push(
     window.onDidChangeTextEditorSelection(async (event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor) return;
-      const itemlist = await vscode.commands.executeCommand(
-        "vscode.executeCompletionItemProvider",
-        editor.document.uri,
-        editor.selection.active
-      );
-      console.log(itemlist);
-      console.log(await vscode.commands.executeCommand("editor.action.triggerSuggest"));
+      //const itemlist = await vscode.commands.executeCommand(
+      //  "vscode.executeCompletionItemProvider",
+      //  editor.document.uri,
+      //  editor.selection.active
+      //);
     })
   );
 
