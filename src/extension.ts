@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { window } from "vscode";
 
 export function activate(context: vscode.ExtensionContext) {
+  const config = vscode.workspace.getConfiguration("audibleCode");
   let prevLineNumber = vscode.window.activeTextEditor?.selection.active.line || -1;
 
   //Read line number upon focusing on document
@@ -51,11 +52,13 @@ export function activate(context: vscode.ExtensionContext) {
       let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
         return e.range.start.line === currLine;
       });
-      console.log(`diagnostics: ${diagnostics.length} prevLine: ${prevLineNumber} curr: ${currLine}`);
-      console.log(diagnostics);
 
       diagnostics = diagnostics.filter((e) => {
-        return e.severity === 1 || e.severity === 2;
+        return (
+          (config.soundCues.severityTypes.Error ? e.severity === 0 : 0) ||
+          (config.soundCues.severityTypes.Warning ? e.severity === 1 : 0) ||
+          (config.soundCues.severityTypes.Information ? e.severity === 3 : 0)
+        );
       });
 
       if (diagnostics.length > 0 && currLine !== prevLineNumber) {
@@ -77,7 +80,11 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     diagnostics = diagnostics.filter((e) => {
-      return e.severity === 1 || e.severity === 2;
+      return (
+        (config.errorReading.severityTypes.Error ? e.severity === 0 : 0) ||
+        (config.errorReading.severityTypes.Warning ? e.severity === 1 : 0) ||
+        (config.errorReading.severityTypes.Information ? e.severity === 3 : 0)
+      );
     });
 
     for (const diagnostic of diagnostics) {

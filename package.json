@@ -25,6 +25,57 @@
         "command": "audible-code.ReadErrors",
         "key": "Ctrl+Shift+L"
       }
+    ],
+    "configuration":[
+      {
+        "title": "Audible Code",
+        "properties": {
+          "audibleCode.soundCues.severityTypes": {
+						"type": "object",
+						"order": 1,
+						"description": "Select which severity of errors activate the sound cues.",
+						"properties": {
+							"Error": {
+								"type": "boolean"
+							},
+							"Warning": {
+								"type": "boolean"
+							},
+              "Information": {
+								"type": "boolean"
+							}
+						},
+						"additionalProperties": false,
+						"default": {
+							"Error": true,
+							"Warning": true,
+              "Information": false
+						}
+					},
+          "audibleCode.errorReading.severityTypes": {
+						"type": "object",
+						"order": 1,
+						"description": "Select which severity of errors will be read when using the Read Errors command.",
+						"properties": {
+							"Error": {
+								"type": "boolean"
+							},
+							"Warning": {
+								"type": "boolean"
+							},
+              "Information": {
+								"type": "boolean"
+							}
+						},
+						"additionalProperties": false,
+						"default": {
+							"Error": true,
+							"Warning": true,
+              "Information": false
+						}
+        }
+      }
+    }
     ]
   },
   "scripts": {
