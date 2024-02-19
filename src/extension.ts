@@ -7,6 +7,7 @@ export function activate(context: vscode.ExtensionContext) {
   let config = vscode.workspace.getConfiguration("audibleCode");
   let prevLineNumber = vscode.window.activeTextEditor?.selection.active.line || -1;
 
+  //Update config object throughout extension upon configuration change
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("audibleCode")) {
@@ -33,6 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor || !config.soundCues.indentSounds.enabled) return;
+      console.log(`Indent pre-update: ${prevLineNumber}`)
       const line = editor.document.lineAt(editor.selection.active.line);
       const indentChar = line.text.charAt(0);
       const leadingSpace = line.text.length - line.text.trimStart().length;
@@ -47,6 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
       if (indent === 0) return;
       const outputChannel = jzz().openMidiOut().or("error");
       outputChannel.note(0, 10 + 10 * indent, 127, 100);
+      setTimeout(()=>{if(window.activeTextEditor)prevLineNumber = window.activeTextEditor.selection.active.line}, 0)
+      console.log(`Indent post-update: ${prevLineNumber}`)
     })
   );
 
@@ -55,6 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor || !config.soundCues.errorSounds.enabled) return;
+      console.log(`Soundcue pre-update: ${prevLineNumber}`)
       const currLine = editor.selection.active.line;
       let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
         return e.range.start.line === currLine;
@@ -74,6 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.note(1, 50, 127, 100);
       }
       prevLineNumber = currLine;
+      console.log(`Soundcue post-update: ${prevLineNumber}`)
     })
   );
 
