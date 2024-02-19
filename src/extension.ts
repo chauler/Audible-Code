@@ -4,20 +4,27 @@ import * as vscode from "vscode";
 import { window } from "vscode";
 
 export function activate(context: vscode.ExtensionContext) {
-  const config = vscode.workspace.getConfiguration("audibleCode");
+  let config = vscode.workspace.getConfiguration("audibleCode");
   let prevLineNumber = vscode.window.activeTextEditor?.selection.active.line || -1;
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("audibleCode")) {
+        config = vscode.workspace.getConfiguration("audibleCode");
+      }
+    })
+  );
 
   //Read line number upon focusing on document
   context.subscriptions.push(
     window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
-        const disposable = window.onDidChangeTextEditorSelection((event) => {
-          if (event.textEditor !== window.activeTextEditor) return;
-          const line = event.selections[0].active.line + 1;
-          OutputTTS(`Line ${line.toString()}`);
-          disposable.dispose();
-        });
-      }
+      if (!editor || !config.readLineNumber.enabled) return;
+      const disposable = window.onDidChangeTextEditorSelection((event) => {
+        if (event.textEditor !== window.activeTextEditor) return;
+        const line = event.selections[0].active.line + 1;
+        OutputTTS(`Line ${line.toString()}`);
+        disposable.dispose();
+      });
     })
   );
 
@@ -25,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
-      if (editor !== window.activeTextEditor) return;
+      if (editor !== window.activeTextEditor || !config.soundCues.indentSounds.enabled) return;
       const line = editor.document.lineAt(editor.selection.active.line);
       const indentChar = line.text.charAt(0);
       const leadingSpace = line.text.length - line.text.trimStart().length;
@@ -47,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
-      if (editor !== window.activeTextEditor) return;
+      if (editor !== window.activeTextEditor || !config.soundCues.errorSounds.enabled) return;
       const currLine = editor.selection.active.line;
       let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
         return e.range.start.line === currLine;

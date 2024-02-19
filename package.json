@@ -15,15 +15,15 @@
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
-      {
-        "command": "audible-code.ReadLine",
-        "title": "Read Line"
-      }
     ],
     "keybindings":[
       {
         "command": "audible-code.ReadErrors",
         "key": "Ctrl+Shift+L"
+      },
+      {
+        "command": "audible-code.ReadLine",
+        "key": "Ctrl+Shift+Q"
       }
     ],
     "configuration":[
@@ -73,7 +73,25 @@
 							"Warning": true,
               "Information": false
 						}
-        }
+          },
+          "audibleCode.readLineNumber.enabled": {
+            "type": "boolean",
+            "order": 0,
+            "description": "Toggle whether the line number is read upon switching focused document.",
+            "default": true
+          },
+          "audibleCode.soundCues.errorSounds.enabled": {
+            "type": "boolean",
+            "order": 0,
+            "description": "Toggle whether sound cues play when the cursor enters a line with errors.",
+            "default": true
+          },
+          "audibleCode.soundCues.indentSounds.enabled": {
+            "type": "boolean",
+            "order": 0,
+            "description": "Toggle whether sound cues play to indicate indentation level.",
+            "default": true
+          }
       }
     }
     ]
