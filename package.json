@@ -124,6 +124,6 @@
   "dependencies": {
     "jazz-midi": "^1.7.9",
     "jzz": "^1.7.8",
-    "say": "^0.16.0"
+    "say": "file:./src/say"
   }
 }

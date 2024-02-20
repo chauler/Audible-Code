@@ -20,12 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     window.onDidChangeActiveTextEditor((editor) => {
       if (!editor || !config.readLineNumber.enabled) return;
-      const disposable = window.onDidChangeTextEditorSelection((event) => {
-        if (event.textEditor !== window.activeTextEditor) return;
-        const line = event.selections[0].active.line + 1;
-        OutputTTS(`Line ${line.toString()}`);
-        disposable.dispose();
-      });
+      ReadLine();
     })
   );
 
@@ -34,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor || !config.soundCues.indentSounds.enabled) return;
-      console.log(`Indent pre-update: ${prevLineNumber}`)
+      console.log(`Indent pre-update: ${prevLineNumber}`);
       const line = editor.document.lineAt(editor.selection.active.line);
       const indentChar = line.text.charAt(0);
       const leadingSpace = line.text.length - line.text.trimStart().length;
@@ -49,8 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
       if (indent === 0) return;
       const outputChannel = jzz().openMidiOut().or("error");
       outputChannel.note(0, 10 + 10 * indent, 127, 100);
-      setTimeout(()=>{if(window.activeTextEditor)prevLineNumber = window.activeTextEditor.selection.active.line}, 0)
-      console.log(`Indent post-update: ${prevLineNumber}`)
+      setTimeout(() => {
+        if (window.activeTextEditor) prevLineNumber = window.activeTextEditor.selection.active.line;
+      }, 0);
+      console.log(`Indent post-update: ${prevLineNumber}`);
     })
   );
 
@@ -59,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor || !config.soundCues.errorSounds.enabled) return;
-      console.log(`Soundcue pre-update: ${prevLineNumber}`)
+      console.log(`Soundcue pre-update: ${prevLineNumber}`);
       const currLine = editor.selection.active.line;
       let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
         return e.range.start.line === currLine;
@@ -79,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.note(1, 50, 127, 100);
       }
       prevLineNumber = currLine;
-      console.log(`Soundcue post-update: ${prevLineNumber}`)
+      console.log(`Soundcue post-update: ${prevLineNumber}`);
     })
   );
 
@@ -136,4 +133,40 @@ function OutputTTS(message: string) {
   return new Promise((res, rej) => {
     say.speak(message, undefined, undefined, res);
   });
+}
+
+function StopTTS() {
+  return new Promise((res, rej) => {
+    say.stop(() => {
+      console.log("done cancelling");
+      res("");
+    });
+  });
+}
+
+function ReadLine() {
+  //When the onDidChangeActiveTextEditor event is fired, the selection is at a default
+  //line 0, column 0 position. In order to read an accurate line number, we must wait for
+  //the editor to restore the previous position, firing an onDidChangeTextEditorSelection
+  //event. We listen for this, then immediately dispose the listener.
+  const disposable = window.onDidChangeTextEditorSelection(async (event) => {
+    if (event.textEditor !== window.activeTextEditor) return;
+    const line = event.selections[0].active.line + 1;
+    //TTS may take a while, so go ahead and dispose this now rather than waiting and potentially triggering again
+    disposable.dispose();
+    //await StopTTS();
+    //console.log("first test");
+    await OutputTTS(`Line ${line.toString()}`);
+  });
+}
+
+class LineReader {
+  static _instance: LineReader | undefined = undefined;
+  _currentlySpeaking = [];
+  constructor() {
+    if (LineReader._instance) {
+      return LineReader._instance;
+    }
+    LineReader._instance = this;
+  }
 }
