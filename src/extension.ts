@@ -29,8 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor || !config.soundCues.indentSounds.enabled) return;
-      console.log(`Indent pre-update: ${prevLineNumber}`);
-      const line = editor.document.lineAt(editor.selection.active.line);
+      const lineNumber = editor.selection.active.line;
+      const line = editor.document.lineAt(lineNumber);
       const indentChar = line.text.charAt(0);
       const leadingSpace = line.text.length - line.text.trimStart().length;
       let indent = 0;
@@ -42,12 +42,13 @@ export function activate(context: vscode.ExtensionContext) {
         indent = Math.ceil(leadingSpace / (editor.options.tabSize! as number));
       }
       if (indent === 0) return;
-      const outputChannel = jzz().openMidiOut().or("error");
-      outputChannel.note(0, 10 + 10 * indent, 127, 100);
+      if (lineNumber !== prevLineNumber) {
+        const outputChannel = jzz().openMidiOut().or("error");
+        outputChannel.note(0, 10 + 10 * indent, 127, 100);
+      }
       setTimeout(() => {
-        if (window.activeTextEditor) prevLineNumber = window.activeTextEditor.selection.active.line;
+        if (window.activeTextEditor) prevLineNumber = lineNumber;
       }, 0);
-      console.log(`Indent post-update: ${prevLineNumber}`);
     })
   );
 
@@ -56,7 +57,6 @@ export function activate(context: vscode.ExtensionContext) {
     window.onDidChangeTextEditorSelection((event) => {
       const editor = event.textEditor;
       if (editor !== window.activeTextEditor || !config.soundCues.errorSounds.enabled) return;
-      console.log(`Soundcue pre-update: ${prevLineNumber}`);
       const currLine = editor.selection.active.line;
       let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
         return e.range.start.line === currLine;
@@ -75,8 +75,9 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.program(1, 81);
         outputChannel.note(1, 50, 127, 100);
       }
-      prevLineNumber = currLine;
-      console.log(`Soundcue post-update: ${prevLineNumber}`);
+      setTimeout(() => {
+        if (window.activeTextEditor) prevLineNumber = window.activeTextEditor.selection.active.line;
+      }, 0);
     })
   );
 
