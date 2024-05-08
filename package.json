@@ -14,9 +14,8 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "commands": [
-    ],
-    "keybindings":[
+    "commands": [],
+    "keybindings": [
       {
         "command": "audible-code.ReadErrors",
         "key": "Ctrl+Shift+L"
@@ -24,55 +23,59 @@
       {
         "command": "audible-code.ReadLine",
         "key": "Ctrl+Shift+Q"
+      },
+      {
+        "command": "audible-code.PlayErrorSound",
+        "key": "Ctrl+/ Ctrl+S"
       }
     ],
-    "configuration":[
+    "configuration": [
       {
         "title": "Audible Code",
         "properties": {
           "audibleCode.soundCues.severityTypes": {
-						"type": "object",
-						"order": 1,
-						"description": "Select which severity of errors activate the sound cues.",
-						"properties": {
-							"Error": {
-								"type": "boolean"
-							},
-							"Warning": {
-								"type": "boolean"
-							},
+            "type": "object",
+            "order": 1,
+            "description": "Select which severity of errors activate the sound cues.",
+            "properties": {
+              "Error": {
+                "type": "boolean"
+              },
+              "Warning": {
+                "type": "boolean"
+              },
               "Information": {
-								"type": "boolean"
-							}
-						},
-						"additionalProperties": false,
-						"default": {
-							"Error": true,
-							"Warning": true,
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "Error": true,
+              "Warning": true,
               "Information": false
-						}
-					},
+            }
+          },
           "audibleCode.errorReading.severityTypes": {
-						"type": "object",
-						"order": 1,
-						"description": "Select which severity of errors will be read when using the Read Errors command.",
-						"properties": {
-							"Error": {
-								"type": "boolean"
-							},
-							"Warning": {
-								"type": "boolean"
-							},
+            "type": "object",
+            "order": 1,
+            "description": "Select which severity of errors will be read when using the Read Errors command.",
+            "properties": {
+              "Error": {
+                "type": "boolean"
+              },
+              "Warning": {
+                "type": "boolean"
+              },
               "Information": {
-								"type": "boolean"
-							}
-						},
-						"additionalProperties": false,
-						"default": {
-							"Error": true,
-							"Warning": true,
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "Error": true,
+              "Warning": true,
               "Information": false
-						}
+            }
           },
           "audibleCode.readLineNumber.enabled": {
             "type": "boolean",
@@ -92,8 +95,8 @@
             "description": "Toggle whether sound cues play to indicate indentation level.",
             "default": true
           }
+        }
       }
-    }
     ]
   },
   "scripts": {
@@ -108,8 +111,10 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/find-exec": "^1.0.2",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@types/play-sound": "^1.1.2",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",

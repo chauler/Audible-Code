@@ -2,10 +2,12 @@ import jzz from "jzz";
 import say from "say";
 import * as vscode from "vscode";
 import { window } from "vscode";
+import AudioPlayer from "./AudioPlayer";
+import path from "path";
 
 export function activate(context: vscode.ExtensionContext) {
   let config = vscode.workspace.getConfiguration("audibleCode");
-  let prevLineNumber = vscode.window.activeTextEditor?.selection.active.line || -1;
+  const appState = new AppState();
 
   //Update config object throughout extension upon configuration change
   context.subscriptions.push(
@@ -42,44 +44,20 @@ export function activate(context: vscode.ExtensionContext) {
         indent = Math.ceil(leadingSpace / (editor.options.tabSize! as number));
       }
       if (indent === 0) return;
-      if (lineNumber !== prevLineNumber) {
+      if (lineNumber !== AppState.getInstance().prevLineNumber) {
         const outputChannel = jzz().openMidiOut().or("error");
         outputChannel.note(0, 10 + 10 * indent, 127, 100);
       }
       setTimeout(() => {
-        if (window.activeTextEditor) prevLineNumber = lineNumber;
+        if (window.activeTextEditor) AppState.getInstance().prevLineNumber = lineNumber;
       }, 0);
     })
   );
 
   //Play sound when user goes on same line as an error.
-  context.subscriptions.push(
-    window.onDidChangeTextEditorSelection((event) => {
-      const editor = event.textEditor;
-      if (editor !== window.activeTextEditor || !config.soundCues.errorSounds.enabled) return;
-      const currLine = editor.selection.active.line;
-      let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
-        return e.range.start.line === currLine;
-      });
+  context.subscriptions.push(window.onDidChangeTextEditorSelection(PlayErrorSoundOnLineChange));
 
-      diagnostics = diagnostics.filter((e) => {
-        return (
-          (config.soundCues.severityTypes.Error ? e.severity === 0 : 0) ||
-          (config.soundCues.severityTypes.Warning ? e.severity === 1 : 0) ||
-          (config.soundCues.severityTypes.Information ? e.severity === 3 : 0)
-        );
-      });
-
-      if (diagnostics.length > 0 && currLine !== prevLineNumber) {
-        const outputChannel = jzz().openMidiOut().or("error");
-        outputChannel.program(1, 81);
-        outputChannel.note(1, 50, 127, 100);
-      }
-      setTimeout(() => {
-        if (window.activeTextEditor) prevLineNumber = window.activeTextEditor.selection.active.line;
-      }, 0);
-    })
-  );
+  vscode.commands.registerCommand("audible-code.PlayErrorSound", PlayErrorSound);
 
   const commandDisposable = vscode.commands.registerCommand("audible-code.ReadErrors", async () => {
     const editor = window.activeTextEditor;
@@ -117,7 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   //Register command to read current line
-  let disposable = vscode.commands.registerCommand("audible-code.ReadLine", () => {
+  let disposable = vscode.commands.registerCommand("audible-code.ReadLine", async () => {
     const editor = window.activeTextEditor;
     if (editor) {
       const line = editor.selection.active.line + 1;
@@ -136,15 +114,6 @@ function OutputTTS(message: string) {
   });
 }
 
-function StopTTS() {
-  return new Promise((res, rej) => {
-    say.stop(() => {
-      console.log("done cancelling");
-      res("");
-    });
-  });
-}
-
 function ReadLine() {
   //When the onDidChangeActiveTextEditor event is fired, the selection is at a default
   //line 0, column 0 position. In order to read an accurate line number, we must wait for
@@ -155,19 +124,69 @@ function ReadLine() {
     const line = event.selections[0].active.line + 1;
     //TTS may take a while, so go ahead and dispose this now rather than waiting and potentially triggering again
     disposable.dispose();
-    //await StopTTS();
-    //console.log("first test");
     await OutputTTS(`Line ${line.toString()}`);
   });
 }
 
-class LineReader {
-  static _instance: LineReader | undefined = undefined;
-  _currentlySpeaking = [];
-  constructor() {
-    if (LineReader._instance) {
-      return LineReader._instance;
+function PlayErrorSoundOnLineChange(event: vscode.TextEditorSelectionChangeEvent): void {
+  const editor = event.textEditor;
+  const config = vscode.workspace.getConfiguration("audibleCode");
+  if (editor !== window.activeTextEditor || !config.soundCues.errorSounds.enabled) return;
+  const currLine = editor.selection.active.line;
+  let diagnostics = GetLineDiagnostics(currLine, editor, config);
+
+  if (diagnostics.length > 0 && currLine !== AppState.getInstance().prevLineNumber) {
+    const player = new AudioPlayer();
+    const filepath = path.normalize(path.join(__dirname, "..", "resources", "audio", "error.wav"));
+    player.play(filepath);
+  }
+  setTimeout(() => {
+    if (window.activeTextEditor) AppState.getInstance().prevLineNumber = window.activeTextEditor.selection.active.line;
+  }, 0);
+}
+
+function PlayErrorSound() {
+  const editor = window.activeTextEditor;
+  if (!editor) return;
+  const currLine = editor.selection.active.line;
+  let diagnostics = GetLineDiagnostics(currLine, editor, vscode.workspace.getConfiguration("audibleCode"));
+  if (diagnostics.length > 0) {
+    const player = new AudioPlayer();
+    const filepath = path.normalize(path.join(__dirname, "..", "resources", "audio", "error.wav"));
+    player.play(filepath);
+  }
+}
+
+function GetLineDiagnostics(
+  line: number,
+  editor: vscode.TextEditor,
+  config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration("audibleCode")
+): vscode.Diagnostic[] {
+  let diagnostics = vscode.languages.getDiagnostics(editor.document.uri).filter((e) => {
+    return e.range.start.line === line;
+  });
+
+  diagnostics = diagnostics.filter((e) => {
+    return (
+      (config.soundCues.severityTypes.Error ? e.severity === 0 : 0) ||
+      (config.soundCues.severityTypes.Warning ? e.severity === 1 : 0) ||
+      (config.soundCues.severityTypes.Information ? e.severity === 3 : 0)
+    );
+  });
+  return diagnostics;
+}
+
+class AppState {
+  prevLineNumber: number = vscode.window.activeTextEditor?.selection.active.line || -1;
+  static _instance: any;
+  constructor(platform?: NodeJS.Platform) {
+    if (AppState._instance) {
+      return AppState._instance;
     }
-    LineReader._instance = this;
+    AppState._instance = this;
+    return AppState._instance;
+  }
+  static getInstance(): AppState {
+    return new AppState();
   }
 }
