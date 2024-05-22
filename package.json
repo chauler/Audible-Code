@@ -18,15 +18,19 @@
     "keybindings": [
       {
         "command": "audible-code.ReadErrors",
-        "key": "Ctrl+Shift+L"
+        "key": "Ctrl+Alt+E"
       },
       {
         "command": "audible-code.ReadLine",
-        "key": "Ctrl+Shift+Q"
+        "key": "Ctrl+Alt+L"
       },
       {
         "command": "audible-code.PlayErrorSound",
-        "key": "Ctrl+/ Ctrl+S"
+        "key": "Ctrl+Space Ctrl+E"
+      },
+      {
+        "command": "audible-code.PlayIndentSound",
+        "key": "Ctrl+Space I"
       }
     ],
     "configuration": [
@@ -94,6 +98,19 @@
             "order": 0,
             "description": "Toggle whether sound cues play to indicate indentation level.",
             "default": true
+          },
+          "audibleCode.soundCues.indentSounds.type": {
+            "type": "string",
+            "default": "beeps",
+            "description": "Select how to indicate indentation. Options are 'pitch' or 'beeps'.",
+            "enum": [
+              "pitch",
+              "beeps"
+            ],
+            "enumDescriptions": [
+              "Indicate indentation with pitch",
+              "Indicate indentation with number of beeps"
+            ]
           }
         }
       }

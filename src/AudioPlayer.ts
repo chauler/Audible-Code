@@ -1,9 +1,10 @@
-import { exec } from "child_process";
+import { ChildProcess, exec } from "child_process";
 
 class AudioPlayer {
-  play(message: string) {
+  play(message: string): Promise<any> {
     throw new Error("Method not implemented.");
   }
+  stop() {}
   static _instance: AudioPlayerBase | undefined = undefined;
   constructor(platform?: NodeJS.Platform) {
     if (AudioPlayer._instance) {
@@ -24,15 +25,29 @@ class AudioPlayer {
 }
 
 class AudioPlayerBase {
-  play(filepath: string) {}
+  children: ChildProcess[];
+  constructor() {
+    this.children = [];
+  }
+  play(filepath: string): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  stop() {
+    throw new Error("Method not implemented.");
+  }
 }
 
 class MacAudioPlayer extends AudioPlayerBase {
   constructor() {
     super();
   }
-  play(filepath: string) {
-    exec(`afplay ${filepath}`);
+  play(filepath: string): Promise<any> {
+    const promise = new Promise((resolve, reject) => {
+      exec(`afplay ${filepath}`, (error) => {
+        resolve(true);
+      });
+    });
+    return promise;
   }
 }
 
@@ -40,8 +55,13 @@ class LinuxAudioPlayer extends AudioPlayerBase {
   constructor() {
     super();
   }
-  play(filepath: string) {
-    exec(`ffplay -v 0 -nodisp -autoexit ${filepath}`);
+  play(filepath: string): Promise<any> {
+    const promise = new Promise((resolve, reject) => {
+      exec(`ffplay -v 0 -nodisp -autoexit ${filepath}`, (error) => {
+        resolve(true);
+      });
+    });
+    return promise;
   }
 }
 
@@ -49,8 +69,23 @@ class WindowsAudioPlayer extends AudioPlayerBase {
   constructor() {
     super();
   }
-  play(filepath: string) {
-    exec(`powershell -c (New-Object Media.SoundPlayer "${filepath}").PlaySync();`);
+  play(filepath: string): Promise<any> {
+    const promise = new Promise((resolve, reject) => {
+      const child = exec(`powershell -c (New-Object Media.SoundPlayer "${filepath}").PlaySync();`, (error) => {
+        resolve(true);
+      });
+      this.children.push(child);
+      child.on("exit", () => {
+        this.children.splice(this.children.indexOf(child), 1);
+      });
+    });
+    return promise;
+  }
+
+  stop() {
+    for (const child of this.children) {
+      exec("taskkill /pid " + child.pid + " /T /F");
+    }
   }
 }
 

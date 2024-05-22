@@ -33,20 +33,10 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor !== window.activeTextEditor || !config.soundCues.indentSounds.enabled) return;
       const lineNumber = editor.selection.active.line;
       const line = editor.document.lineAt(lineNumber);
-      const indentChar = line.text.charAt(0);
-      const leadingSpace = line.text.length - line.text.trimStart().length;
-      let indent = 0;
-      if (indentChar === "\t") {
-        // used tabs
-        indent = leadingSpace;
-      } else if (indentChar === " ") {
-        // used spaces
-        indent = Math.ceil(leadingSpace / (editor.options.tabSize! as number));
-      }
+      let indent = GetIdent(line.text);
       if (indent === 0) return;
       if (lineNumber !== AppState.getInstance().prevLineNumber) {
-        const outputChannel = jzz().openMidiOut().or("error");
-        outputChannel.note(0, 10 + 10 * indent, 127, 100);
+        PlayIndentSound();
       }
       setTimeout(() => {
         if (window.activeTextEditor) AppState.getInstance().prevLineNumber = lineNumber;
@@ -58,6 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(window.onDidChangeTextEditorSelection(PlayErrorSoundOnLineChange));
 
   vscode.commands.registerCommand("audible-code.PlayErrorSound", PlayErrorSound);
+  vscode.commands.registerCommand("audible-code.PlayIndentSound", PlayIndentSound);
 
   const commandDisposable = vscode.commands.registerCommand("audible-code.ReadErrors", async () => {
     const editor = window.activeTextEditor;
@@ -104,6 +95,22 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(disposable);
+}
+
+function GetIdent(line: string) {
+  const editor = window.activeTextEditor;
+  if (!editor) return 0;
+  const indentChar = line.charAt(0);
+  const leadingSpace = line.length - line.trimStart().length;
+  let indent = 0;
+  if (indentChar === "\t") {
+    // used tabs
+    indent = leadingSpace;
+  } else if (indentChar === " ") {
+    // used spaces
+    indent = Math.ceil(leadingSpace / (editor.options.tabSize! as number));
+  }
+  return indent;
 }
 
 export function deactivate() {}
@@ -154,6 +161,36 @@ function PlayErrorSound() {
     const player = new AudioPlayer();
     const filepath = path.normalize(path.join(__dirname, "..", "resources", "audio", "error.wav"));
     player.play(filepath);
+  }
+}
+
+async function PlayIndentSound() {
+  const editor = window.activeTextEditor;
+  if (!editor) return;
+  const config = vscode.workspace.getConfiguration("audibleCode");
+  const lineNumber = editor.selection.active.line;
+  const indent = GetIdent(editor.document.lineAt(lineNumber).text);
+  if (config.soundCues.indentSounds.type === "beeps") {
+    let earlyExitFlag = false;
+    const earlyExitCheck = window.onDidChangeTextEditorSelection((event) => {
+      if (event.textEditor !== window.activeTextEditor) return;
+      if (event.selections[0].active.line !== lineNumber) {
+        earlyExitFlag = true;
+        earlyExitCheck.dispose();
+      }
+    });
+    const player = new AudioPlayer();
+    const beepFilePath = path.normalize(path.join(__dirname, "..", "resources", "audio", "beep.wav"));
+    player.stop();
+    for (let i = 0; i < indent; i++) {
+      if (earlyExitFlag) break;
+      player.play(beepFilePath);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    earlyExitCheck.dispose();
+  } else if (config.soundCues.indentSounds.type === "pitch") {
+    const outputChannel = jzz().openMidiOut().or("error");
+    outputChannel.note(0, 10 + 10 * indent, 127, 100);
   }
 }
 
